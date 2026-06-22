@@ -1,49 +1,29 @@
 workflows:
-  android-workflow:
-    name: Compilación Automática APK (Rastreo Profundo)
+  android-native-workflow:
+    name: Compilación Nativa Android APK
     max_build_duration: 60
     instance_type: mac_mini_m1
     environment:
       groups:
         - android_credentials
-      node: latest
+      vars:
+        JAVA_VERSION: "17" # Ajusta a "11" si tu proyecto es más antiguo
     triggering:
       events:
         - push
     scripts:
-      - name: Buscar proyecto y compilar APK
+      - name: Configurar Entorno Java
         script: |
-          echo "=== UBICACIÓN ACTUAL ==="
-          pwd
-          ls -la
+          echo "Configurando la versión de Java..."
+          jenv global $JAVA_VERSION
+          java -version
+      - name: Otorgar permisos y Compilar APK
+        script: |
+          echo "=== Iniciando compilación de Gradle ==="
+          # Otorgar permisos de ejecución al script compilador de tu raíz
+          chmod +x gradlew
           
-          echo "=== BUSCANDO EL COMPILADOR EN EL REPOSITORIO ==="
-          # Buscar el archivo gradlew en cualquier nivel de subcarpetas
-          GRADLE_PATH=$(find . -name "gradlew" -print -quit)
-          
-          if [ -n "$GRADLE_PATH" ]; then
-            echo "¡Compilador encontrado en: $GRADLE_PATH!"
-            PROJECT_DIR=$(dirname "$GRADLE_PATH")
-            cd "$PROJECT_DIR"
-            chmod +x gradlew
-            ./gradlew assembleDebug
-          else
-            echo "Buscando si es un proyecto comprimido o requiere otra estructura..."
-            # Si subiste un .zip dentro del repositorio, lo descomprimimos en caliente
-            ZIP_FILE=$(find . -name "*.zip" -print -quit)
-            if [ -n "$ZIP_FILE" ]; then
-              echo "Descomprimiendo archivo local $ZIP_FILE..."
-              unzip -o "$ZIP_FILE" -d ./extracted_project
-              GRADLE_SUB=$(find ./extracted_project -name "gradlew" -print -quit)
-              if [ -n "$GRADLE_SUB" ]; then
-                cd $(dirname "$GRADLE_SUB")
-                chmod +x gradlew
-                ./gradlew assembleDebug
-              fi
-            else
-              echo "ERROR CRÍTICO: No se encontró ningún archivo ejecutable de Android (gradlew) ni archivos .zip válidos."
-              exit 1
-            fi
-          fi
+          # Ejecutar el empaquetado limpio del APK en modo Debug
+          ./gradlew clean assembleDebug
     artifacts:
-      - "**/build/outputs/apk/**/*.apk"
+      - app/build/outputs/apk/debug/*.apk
