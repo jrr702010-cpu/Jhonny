@@ -1,5 +1,6 @@
 package com.example.ui
 
+import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -29,7 +30,8 @@ enum class ThemeMode {
 
 class MainViewModel(
     private val repository: BcvRepository,
-    private val sharedPreferences: SharedPreferences
+    private val sharedPreferences: SharedPreferences,
+    private val context: Context
 ) : ViewModel() {
 
     private val TAG = "MainViewModel"
@@ -147,6 +149,13 @@ class MainViewModel(
                         _variationPercent.value = "+0,12%"
                         _isVariationPositive.value = true
                         _errorMessage.value = "Modo demostración. Conéctate a una red para sincronizar."
+                        
+                        // Notify Home Screen widget
+                        try {
+                            com.example.BcvAppWidgetProvider.triggerUpdate(context)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error notifying widget", e)
+                        }
                     }
                 }
             }
@@ -170,6 +179,13 @@ class MainViewModel(
         repository.insertRate(nextRecord)
         _currentRate.value = nextRecord
         calculateVariation(nextRecord)
+
+        // Notify Home Screen widget
+        try {
+            com.example.BcvAppWidgetProvider.triggerUpdate(context)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error notifying widget", e)
+        }
     }
 
     private suspend fun calculateVariation(current: BcvRateRecord) {
@@ -229,6 +245,13 @@ class MainViewModel(
             repository.clearRates()
             _currentRate.value = null
             _variationPercent.value = "0,00%"
+
+            // Notify Home Screen widget
+            try {
+                com.example.BcvAppWidgetProvider.triggerUpdate(context)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error notifying widget", e)
+            }
         }
     }
 }
@@ -236,12 +259,13 @@ class MainViewModel(
 // Custom ViewModel Factory compatible with standard Composable injection
 class ViewModelFactory(
     private val repository: BcvRepository,
-    private val sharedPreferences: SharedPreferences
+    private val sharedPreferences: SharedPreferences,
+    private val context: Context
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MainViewModel(repository, sharedPreferences) as T
+            return MainViewModel(repository, sharedPreferences, context) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

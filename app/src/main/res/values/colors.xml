@@ -7,4 +7,14 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Binance Dark Theme colors for launcher widget -->
+    <color name="binance_black_bg">#FF0B0E11</color>
+    <color name="binance_surface_card">#FF181A20</color>
+    <color name="binance_gold">#FFFCD535</color>
+    <color name="binance_green">#FF0ECB81</color>
+    <color name="binance_red">#FFF6465D</color>
+    <color name="binance_text_white">#FFEAECEF</color>
+    <color name="binance_text_muted">#FF848E9C</color>
+    <color name="binance_border">#FF2B3139</color>
 </resources>

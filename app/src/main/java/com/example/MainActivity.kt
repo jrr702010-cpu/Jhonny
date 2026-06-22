@@ -55,8 +55,8 @@ class MainActivity : ComponentActivity() {
         // Get SharedPreferences
         val sharedPrefs = getSharedPreferences("com.example.bcv_prefs", Context.MODE_PRIVATE)
         
-        // 2. Initialize MainViewModel using custom factory with SharedPreferences
-        val factory = ViewModelFactory(repository, sharedPrefs)
+        // 2. Initialize MainViewModel using custom factory with SharedPreferences and Context
+        val factory = ViewModelFactory(repository, sharedPrefs, applicationContext)
         val viewModel = ViewModelProvider(this, factory)[MainViewModel::class.java]
 
         enableEdgeToEdge()
