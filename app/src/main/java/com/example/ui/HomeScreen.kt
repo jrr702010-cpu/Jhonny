@@ -61,12 +61,6 @@ fun HomeScreen(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- Theme Selection Segmented Top Widget ---
-        ThemeSelectorSection(
-            currentTheme = themeMode,
-            onThemeSelected = { viewModel.setThemeMode(it) }
-        )
-
         // --- Error Alert Banner ---
         errorMessage?.let { error ->
             Card(

@@ -76,6 +76,22 @@ class MainViewModel(
     private val _isConvertingUsdToBs = MutableStateFlow(true)
     val isConvertingUsdToBs: StateFlow<Boolean> = _isConvertingUsdToBs.asStateFlow()
 
+    // --- Notification Preferences ---
+    private val _notificationsEnabled = MutableStateFlow(false)
+    val notificationsEnabled: StateFlow<Boolean> = _notificationsEnabled.asStateFlow()
+
+    private val _notifyOnChanges = MutableStateFlow(false)
+    val notifyOnChanges: StateFlow<Boolean> = _notifyOnChanges.asStateFlow()
+
+    private val _dailyReminderEnabled = MutableStateFlow(false)
+    val dailyReminderEnabled: StateFlow<Boolean> = _dailyReminderEnabled.asStateFlow()
+
+    private val _dailyReminderTime = MutableStateFlow("09:00")
+    val dailyReminderTime: StateFlow<String> = _dailyReminderTime.asStateFlow()
+
+    private val _autoRefreshEnabled = MutableStateFlow(false)
+    val autoRefreshEnabled: StateFlow<Boolean> = _autoRefreshEnabled.asStateFlow()
+
     init {
         // Load theme preference
         val savedTheme = sharedPreferences.getString("theme_mode", ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name
@@ -85,6 +101,18 @@ class MainViewModel(
             ThemeMode.SYSTEM
         }
 
+        // Load notifications configuration
+        _notificationsEnabled.value = sharedPreferences.getBoolean("pref_notif_enabled", false)
+        _notifyOnChanges.value = sharedPreferences.getBoolean("pref_notif_changes", false)
+        _dailyReminderEnabled.value = sharedPreferences.getBoolean("pref_daily_reminder_enabled", false)
+        _dailyReminderTime.value = sharedPreferences.getString("pref_daily_reminder_time", "09:00") ?: "09:00"
+        _autoRefreshEnabled.value = sharedPreferences.getBoolean("pref_auto_refresh_enabled", false)
+
+        // Initialize background worker if enabled
+        if (_autoRefreshEnabled.value) {
+            com.example.BcvSyncScheduler.scheduleBackgroundSync(context)
+        }
+
         // Load latest available record initially
         loadInitialData()
     }
@@ -92,6 +120,54 @@ class MainViewModel(
     fun setThemeMode(mode: ThemeMode) {
         _themeMode.value = mode
         sharedPreferences.edit().putString("theme_mode", mode.name).apply()
+    }
+
+    fun setNotificationsEnabled(enabled: Boolean) {
+        _notificationsEnabled.value = enabled
+        sharedPreferences.edit().putBoolean("pref_notif_enabled", enabled).apply()
+        
+        // Handle alarm update
+        if (!enabled) {
+            com.example.BcvReminderReceiver.cancelReminder(context)
+        } else if (_dailyReminderEnabled.value) {
+            com.example.BcvReminderReceiver.scheduleReminder(context, _dailyReminderTime.value)
+        }
+    }
+
+    fun setNotifyOnChanges(enabled: Boolean) {
+        _notifyOnChanges.value = enabled
+        sharedPreferences.edit().putBoolean("pref_notif_changes", enabled).apply()
+    }
+
+    fun setDailyReminderEnabled(enabled: Boolean) {
+        _dailyReminderEnabled.value = enabled
+        sharedPreferences.edit().putBoolean("pref_daily_reminder_enabled", enabled).apply()
+        
+        if (enabled && _notificationsEnabled.value) {
+            com.example.BcvReminderReceiver.scheduleReminder(context, _dailyReminderTime.value)
+        } else {
+            com.example.BcvReminderReceiver.cancelReminder(context)
+        }
+    }
+
+    fun setDailyReminderTime(timeStr: String) {
+        _dailyReminderTime.value = timeStr
+        sharedPreferences.edit().putString("pref_daily_reminder_time", timeStr).apply()
+        
+        if (_dailyReminderEnabled.value && _notificationsEnabled.value) {
+            com.example.BcvReminderReceiver.scheduleReminder(context, timeStr)
+        }
+    }
+
+    fun setAutoRefreshEnabled(enabled: Boolean) {
+        _autoRefreshEnabled.value = enabled
+        sharedPreferences.edit().putBoolean("pref_auto_refresh_enabled", enabled).apply()
+        
+        if (enabled) {
+            com.example.BcvSyncScheduler.scheduleBackgroundSync(context)
+        } else {
+            com.example.BcvSyncScheduler.cancelBackgroundSync(context)
+        }
     }
 
     private fun loadInitialData() {
@@ -165,6 +241,7 @@ class MainViewModel(
     }
 
     private suspend fun saveScrapedRates(res: ScrapResult, source: String) {
+        val oldRecord = _currentRate.value
         val nextRecord = BcvRateRecord(
             dateText = res.dateText.ifEmpty {
                 SimpleDateFormat("EEEE, dd 'de' MMMM 'de' yyyy", Locale("es", "VE")).format(Date())
@@ -179,6 +256,20 @@ class MainViewModel(
         repository.insertRate(nextRecord)
         _currentRate.value = nextRecord
         calculateVariation(nextRecord)
+
+        // Trigger rate change notification if settings allow and value actually changed
+        if (_notificationsEnabled.value && _notifyOnChanges.value && oldRecord != null && oldRecord.usd != nextRecord.usd) {
+            try {
+                com.example.NotificationHelper.showRateChangeNotification(
+                    context = context,
+                    oldRate = oldRecord.usd,
+                    newRate = nextRecord.usd,
+                    dateStr = nextRecord.dateText
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send change notification", e)
+            }
+        }
 
         // Notify Home Screen widget
         try {

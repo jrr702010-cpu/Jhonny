@@ -7,47 +7,61 @@
     android:orientation="vertical"
     android:padding="14dp">
 
-    <!-- Top Row: Badge & Unit -->
-    <LinearLayout
+    <!-- Top Row: Badge & Status Indicator -->
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:layout_height="wrap_content">
 
         <!-- Gold capsule indicator -->
         <TextView
             android:id="@+id/widget_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="BCV OFICIAL"
+            android:background="@drawable/widget_badge_bg"
+            android:paddingLeft="6dp"
+            android:paddingTop="2dp"
+            android:paddingRight="6dp"
+            android:paddingBottom="2dp"
+            android:text="USD BCV"
             android:textColor="@color/binance_gold"
-            android:textSize="10sp"
+            android:textSize="9sp"
             android:textStyle="bold" />
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <TextView
+        <!-- Status Indicator mimicking trading status -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Bs/$"
-            android:textColor="@color/binance_text_muted"
-            android:textSize="10sp"
-            android:textStyle="bold" />
-    </LinearLayout>
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-    <Space
-        android:layout_width="match_parent"
-        android:layout_height="6dp" />
+            <TextView
+                android:id="@+id/widget_status_dot"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="●"
+                android:textColor="@color/binance_green"
+                android:textSize="10sp"
+                android:layout_marginEnd="3dp" />
 
-    <!-- Center: Main Rate Value -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AL DÍA"
+                android:textColor="@color/binance_text_white"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </RelativeLayout>
+
+    <!-- Center USD rate display using margins instead of <Space> -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="bottom">
+        android:gravity="bottom"
+        android:layout_marginTop="8dp">
 
         <TextView
             android:id="@+id/widget_rate_value"
@@ -55,43 +69,94 @@
             android:layout_height="wrap_content"
             android:text="36,42"
             android:textColor="@color/binance_gold"
-            android:textSize="26sp"
+            android:textSize="28sp"
             android:textStyle="bold"
             android:includeFontPadding="false" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="3dp"
+            android:layout_marginBottom="4dp"
+            android:text="Bs"
+            android:textColor="@color/binance_text_white"
+            android:textSize="10sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widget_rate_variation"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:layout_marginBottom="2dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="4dp"
             android:text="▲ +0,12%"
             android:textColor="@color/binance_green"
-            android:textSize="10sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
 
-    <Space
+    <!-- EUR Row with margin instead of Space -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="6dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="EUR / Bs"
+            android:textColor="@color/binance_text_muted"
+            android:textSize="10sp"
+            android:textStyle="normal" />
+
+        <!-- Fills space dynamically using a supported <LinearLayout> layout spacer -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1"
+            android:orientation="horizontal" />
+
+        <TextView
+            android:id="@+id/widget_eur_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="39,55"
+            android:textColor="@color/binance_text_white"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="2dp"
+            android:text="Bs"
+            android:textColor="@color/binance_text_muted"
+            android:textSize="9sp" />
+    </LinearLayout>
+
+    <!-- Spacer to balance layout with remaining space using a supported empty LinearLayout -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:orientation="horizontal" />
 
-    <!-- Divider line -->
-    <View
+    <!-- Divider line using a supported empty LinearLayout structure -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="@color/binance_border" />
-
-    <Space
-        android:layout_width="match_parent"
-        android:layout_height="6dp" />
+        android:background="@color/binance_border"
+        android:orientation="horizontal"
+        android:layout_marginBottom="6dp" />
 
     <!-- Bottom: Cached Date -->
     <TextView
         android:id="@+id/widget_rate_date"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Date text loading..."
+        android:text="Fecha de cotización oficial"
         android:textColor="@color/binance_text_muted"
         android:textSize="9sp"
         android:singleLine="true"

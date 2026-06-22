@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,13 +37,16 @@ import com.example.ui.theme.*
 
 enum class AppScreen {
     Inicio,
-    Historial
+    Ajustes
 }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // 0. Create Notifications Channel on launch
+        NotificationHelper.createNotificationChannels(applicationContext)
+
         // 1. Initialize Room Local Database
         val database = Room.databaseBuilder(
             applicationContext,
@@ -155,7 +159,7 @@ fun MainAppLayout(viewModel: MainViewModel) {
         ) {
             when (currentScreen) {
                 AppScreen.Inicio -> HomeScreen(viewModel = viewModel)
-                AppScreen.Historial -> HistoryScreen(viewModel = viewModel)
+                AppScreen.Ajustes -> SettingsScreen(viewModel = viewModel)
             }
         }
     }
@@ -188,11 +192,11 @@ fun CustomBottomNavigationBar(
             )
 
             NavBarItem(
-                label = "Historial",
-                icon = Icons.Default.List,
-                selected = currentScreen == AppScreen.Historial,
-                onClick = { onScreenSelected(AppScreen.Historial) },
-                testTag = "nav_btn_history"
+                label = "Ajustes",
+                icon = Icons.Default.Settings,
+                selected = currentScreen == AppScreen.Ajustes,
+                onClick = { onScreenSelected(AppScreen.Ajustes) },
+                testTag = "nav_btn_settings"
             )
         }
     }

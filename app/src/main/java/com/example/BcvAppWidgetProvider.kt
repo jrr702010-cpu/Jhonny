@@ -64,12 +64,14 @@ class BcvAppWidgetProvider : AppWidgetProvider() {
 
         // Setup default presentation if DB is currently empty
         val valueStr: String
+        val eurStr: String
         val dateStr: String
         val variationStr: String
         val isPositive: Boolean
 
         if (latest != null) {
             valueStr = String.format("%.2f", latest.usd).replace(".", ",")
+            eurStr = String.format("%.2f", latest.eur).replace(".", ",")
             dateStr = "Actualizado: ${latest.dateText}"
 
             if (previous != null && previous.usd > 0.0) {
@@ -86,6 +88,7 @@ class BcvAppWidgetProvider : AppWidgetProvider() {
         } else {
             // Placeholder template display
             valueStr = "36,42"
+            eurStr = "39,55"
             dateStr = "Sin conexión / cargando"
             variationStr = "+0,12%"
             isPositive = true
@@ -93,6 +96,7 @@ class BcvAppWidgetProvider : AppWidgetProvider() {
 
         // Apply styled values to widgets views
         views.setTextViewText(R.id.widget_rate_value, valueStr)
+        views.setTextViewText(R.id.widget_eur_value, eurStr)
         views.setTextViewText(R.id.widget_rate_date, dateStr)
         views.setTextViewText(
             R.id.widget_rate_variation,
