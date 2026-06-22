@@ -1,6 +1,8 @@
 package com.example.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -51,7 +53,7 @@ fun HistoryScreen(
         // --- Multi-Currency Table ---
         Text(
             text = "DIVISAS OFICIALES BCV",
-            color = MutedOlive,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.sp
@@ -66,7 +68,8 @@ fun HistoryScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(ClayGrey)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
                         .padding(12.dp)
                         .testTag("currency_row_${item.code}"),
                     verticalAlignment = Alignment.CenterVertically,
@@ -80,13 +83,13 @@ fun HistoryScreen(
                         Column {
                             Text(
                                 text = item.code,
-                                color = NaturalCharcoal,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = item.name,
-                                color = MutedOlive,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 11.sp
                             )
                         }
@@ -95,9 +98,9 @@ fun HistoryScreen(
                     val formattedVal = String.format("%.4f", item.value).replace(".", ",")
                     Text(
                         text = "$formattedVal Bs",
-                        color = MossDark,
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.ExtraBold
                     )
                 }
             }
@@ -111,7 +114,7 @@ fun HistoryScreen(
         ) {
             Text(
                 text = "HISTÓRICO RECIENTE",
-                color = MutedOlive,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
@@ -128,7 +131,7 @@ fun HistoryScreen(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Limpiar Historial",
-                        tint = EarthRed,
+                        tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -146,21 +149,22 @@ fun HistoryScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
                         .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "Historial vacío",
-                            color = MutedOlive,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Presiona refrescar en inicio para sincronizar.",
-                            color = MutedOlive.copy(alpha = 0.7f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             fontSize = 12.sp,
                             textAlign = TextAlign.Center
                         )
@@ -178,7 +182,8 @@ fun HistoryScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(Color.White)
+                                .background(MaterialTheme.colorScheme.surface)
+                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -186,14 +191,14 @@ fun HistoryScreen(
                             Column {
                                 Text(
                                     text = record.dateText,
-                                    color = NaturalCharcoal,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = "Origen: ${record.source}",
-                                    color = MutedOlive,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontSize = 11.sp
                                 )
                             }
@@ -201,9 +206,9 @@ fun HistoryScreen(
                             val usdValue = String.format("%.2f", record.usd).replace(".", ",")
                             Text(
                                 text = "$usdValue Bs",
-                                color = MossGreen,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.ExtraBold
                             )
                         }
                     }

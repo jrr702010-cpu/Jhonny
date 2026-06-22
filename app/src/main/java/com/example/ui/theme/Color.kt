@@ -2,20 +2,22 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// --- Natural Tones Theme Colors ---
-val NaturalLinen = Color(0xFFFCF9F2)       // App background
-val NaturalCharcoal = Color(0xFF1C1C17)    // Clean dark text
+// --- Dark Ambient Binance Theme Colors ---
+val BinanceBlack = Color(0xFF0B0E11)           // Main deep dark background
+val BinanceSurface = Color(0xFF181A20)         // Surface cards
+val BinanceSurfaceSecondary = Color(0xFF2F3643) // Active states / elements / pills
+val BinanceYellow = Color(0xFFFCD535)          // Classic Binance Gold/Yellow
+val BinanceYellowMuted = Color(0xFFF0B90B)     // Sparsed darker yellow
+val BinanceGreen = Color(0xFF0ECB81)           // High positive green
+val BinanceRed = Color(0xFFF6465D)             // High negative red
+val BinanceWhiteText = Color(0xFFEAECEF)       // High contrast text
+val BinanceMutedText = Color(0xFF848E9C)       // Low contrast sub-labels
+val BinanceBorder = Color(0xFF2B3139)          // Muted dark separators
 
-val MossGreen = Color(0xFF444D1E)          // Primary highlights
-val MossDark = Color(0xFF1A1E00)           // Heading text on Moss highlights
-val MossSoft = Color(0xFFE1E9BE)           // Main focus card / rate banner
-
-val SageGreen = Color(0xFFD8E7CB)          // Accent pill / active states
-val SageDark = Color(0xFF1A2214)           // Text on SageGreen
-
-val ClayGrey = Color(0xFFF3F4E9)           // Stats cards / navigation background
-val MutedOlive = Color(0xFF5D5F52)         // Subtexts and descriptions
-
-val StoneBeige = Color(0xFFE3E3DC)         // Borders and divider lines
-val ForestGreen = Color(0xFF386A20)        // Growth (+%)
-val EarthRed = Color(0xFF9E2A2B)           // Decline (-%)
+// --- Light Binance Theme Colors ---
+val BinanceLightBg = Color(0xFFF8F9FA)         // Sophisticated light grey background
+val BinanceLightSurface = Color(0xFFFFFFFF)     // High white surface cards
+val BinanceLightCard = Color(0xFFF0F2F5)        // Sub-sections background
+val BinanceLightDarkText = Color(0xFF1E2329)     // High contrast dark text
+val BinanceLightMuted = Color(0xFF707A8A)        // Muted grey labels
+val BinanceLightBorder = Color(0xFFEAECEF)       // Light lines separators

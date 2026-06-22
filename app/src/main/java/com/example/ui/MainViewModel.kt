@@ -1,5 +1,6 @@
 package com.example.ui
 
+import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -20,9 +21,22 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class MainViewModel(private val repository: BcvRepository) : ViewModel() {
+enum class ThemeMode {
+    LIGHT,
+    DARK,
+    SYSTEM
+}
+
+class MainViewModel(
+    private val repository: BcvRepository,
+    private val sharedPreferences: SharedPreferences
+) : ViewModel() {
 
     private val TAG = "MainViewModel"
+
+    // Theme Mode selection
+    private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
     // Raw rates history reactively from Room
     val ratesHistory: StateFlow<List<BcvRateRecord>> = repository.allRates
@@ -60,20 +74,22 @@ class MainViewModel(private val repository: BcvRepository) : ViewModel() {
     private val _isConvertingUsdToBs = MutableStateFlow(true)
     val isConvertingUsdToBs: StateFlow<Boolean> = _isConvertingUsdToBs.asStateFlow()
 
-    // --- AI Chat States ---
-    private val _chatMessages = MutableStateFlow<List<Pair<String, Boolean>>>(
-        listOf(
-            "¡Hola! Soy tu Asistente IA Financiero de Monitor BCV. Pregúntame sobre el tipo de cambio oficial, inflación, proyecciones económicas o cómo realizar conversiones." to false
-        )
-    )
-    val chatMessages: StateFlow<List<Pair<String, Boolean>>> = _chatMessages.asStateFlow()
-
-    private val _isChatLoading = MutableStateFlow(false)
-    val isChatLoading: StateFlow<Boolean> = _isChatLoading.asStateFlow()
-
     init {
+        // Load theme preference
+        val savedTheme = sharedPreferences.getString("theme_mode", ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name
+        _themeMode.value = try {
+            ThemeMode.valueOf(savedTheme)
+        } catch (e: Exception) {
+            ThemeMode.SYSTEM
+        }
+
         // Load latest available record initially
         loadInitialData()
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        _themeMode.value = mode
+        sharedPreferences.edit().putString("theme_mode", mode.name).apply()
     }
 
     private fun loadInitialData() {
@@ -208,33 +224,6 @@ class MainViewModel(private val repository: BcvRepository) : ViewModel() {
         }
     }
 
-    // --- AI Chat Actions ---
-    fun sendChatMessage(message: String) {
-        val userMsg = message.trim()
-        if (userMsg.isEmpty()) return
-
-        // Save current list
-        val currentHistory = _chatMessages.value.toMutableList()
-        currentHistory.add(userMsg to true)
-        _chatMessages.value = currentHistory
-
-        _isChatLoading.value = true
-
-        viewModelScope.launch {
-            val response = GeminiNetwork.askFinancialAssistant(currentHistory, userMsg)
-            val updatedHistory = _chatMessages.value.toMutableList()
-            updatedHistory.add(response to false)
-            _chatMessages.value = updatedHistory
-            _isChatLoading.value = false
-        }
-    }
-
-    fun clearChat() {
-        _chatMessages.value = listOf(
-            "¡Hola! Soy tu Asistente IA Financiero de Monitor BCV. Pregúntame sobre el tipo de cambio oficial, inflación, proyecciones económicas o cómo realizar conversiones." to false
-        )
-    }
-
     fun clearRates() {
         viewModelScope.launch {
             repository.clearRates()
@@ -245,11 +234,14 @@ class MainViewModel(private val repository: BcvRepository) : ViewModel() {
 }
 
 // Custom ViewModel Factory compatible with standard Composable injection
-class ViewModelFactory(private val repository: BcvRepository) : ViewModelProvider.Factory {
+class ViewModelFactory(
+    private val repository: BcvRepository,
+    private val sharedPreferences: SharedPreferences
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MainViewModel(repository) as T
+            return MainViewModel(repository, sharedPreferences) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

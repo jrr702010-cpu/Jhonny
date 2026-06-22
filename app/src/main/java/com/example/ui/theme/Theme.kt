@@ -7,46 +7,46 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Light Natural Tones Theme Scheme
-private val LightNaturalColorScheme = lightColorScheme(
-    primary = MossGreen,
+// Light Binance Aesthetic Theme Scheme
+private val LightBinanceColorScheme = lightColorScheme(
+    primary = BinanceYellowMuted,
     onPrimary = Color.White,
-    primaryContainer = MossSoft,
-    onPrimaryContainer = MossDark,
-    secondary = SageGreen,
-    onSecondary = SageDark,
-    secondaryContainer = SageGreen,
-    onSecondaryContainer = SageDark,
-    background = NaturalLinen,
-    onBackground = NaturalCharcoal,
-    surface = Color.White,
-    onSurface = NaturalCharcoal,
-    surfaceVariant = ClayGrey,
-    onSurfaceVariant = MutedOlive,
-    outline = StoneBeige,
-    error = EarthRed,
+    primaryContainer = Color(0xFFFEF6D8),
+    onPrimaryContainer = Color(0xFF8C6200),
+    secondary = BinanceLightCard,
+    onSecondary = BinanceLightDarkText,
+    secondaryContainer = BinanceLightCard,
+    onSecondaryContainer = BinanceLightDarkText,
+    background = BinanceLightBg,
+    onBackground = BinanceLightDarkText,
+    surface = BinanceLightSurface,
+    onSurface = BinanceLightDarkText,
+    surfaceVariant = BinanceLightCard,
+    onSurfaceVariant = BinanceLightMuted,
+    outline = BinanceLightBorder,
+    error = BinanceRed,
     onError = Color.White
 )
 
-// Dark Forestadapted Scheme for Dark Theme users
-private val DarkNaturalColorScheme = darkColorScheme(
-    primary = SageGreen,
-    onPrimary = SageDark,
-    primaryContainer = Color(0xFF2E3514),
-    onPrimaryContainer = MossSoft,
-    secondary = MossSoft,
-    onSecondary = MossDark,
-    secondaryContainer = Color(0xFF242C1D),
-    onSecondaryContainer = SageGreen,
-    background = Color(0xFF11120E),
-    onBackground = Color(0xFFE6E2D8),
-    surface = Color(0xFF1A1C16),
-    onSurface = Color(0xFFE6E2D8),
-    surfaceVariant = Color(0xFF23251F),
-    onSurfaceVariant = MutedOlive,
-    outline = Color(0xFF47493F),
-    error = Color(0xFFFFB4AB),
-    onError = Color(0xFF690005)
+// Dark Ambient Binance Theme Scheme
+private val DarkBinanceColorScheme = darkColorScheme(
+    primary = BinanceYellow,
+    onPrimary = BinanceBlack,
+    primaryContainer = Color(0xFF2B2205),
+    onPrimaryContainer = BinanceYellow,
+    secondary = BinanceSurfaceSecondary,
+    onSecondary = BinanceWhiteText,
+    secondaryContainer = BinanceSurfaceSecondary,
+    onSecondaryContainer = BinanceWhiteText,
+    background = BinanceBlack,
+    onBackground = BinanceWhiteText,
+    surface = BinanceSurface,
+    onSurface = BinanceWhiteText,
+    surfaceVariant = Color(0xFF202630),
+    onSurfaceVariant = BinanceMutedText,
+    outline = BinanceBorder,
+    error = BinanceRed,
+    onError = Color.White
 )
 
 @Composable
@@ -55,9 +55,9 @@ fun MyApplicationTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) {
-        DarkNaturalColorScheme
+        DarkBinanceColorScheme
     } else {
-        LightNaturalColorScheme
+        LightBinanceColorScheme
     }
 
     MaterialTheme(

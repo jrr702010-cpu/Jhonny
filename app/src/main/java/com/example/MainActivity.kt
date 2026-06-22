@@ -1,18 +1,17 @@
 package com.example
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Refresh
@@ -37,8 +36,7 @@ import com.example.ui.theme.*
 
 enum class AppScreen {
     Inicio,
-    Historial,
-    Asistente
+    Historial
 }
 
 class MainActivity : ComponentActivity() {
@@ -49,18 +47,28 @@ class MainActivity : ComponentActivity() {
         val database = Room.databaseBuilder(
             applicationContext,
             BcvDatabase::class.java,
-            "bcv_rates_v1.db"
+            "bcv_rates_v2.db"
         ).fallbackToDestructiveMigration().build()
         
         val repository = BcvRepository(database.bcvDao())
         
-        // 2. Initialize MainViewModel using custom factory
-        val factory = ViewModelFactory(repository)
+        // Get SharedPreferences
+        val sharedPrefs = getSharedPreferences("com.example.bcv_prefs", Context.MODE_PRIVATE)
+        
+        // 2. Initialize MainViewModel using custom factory with SharedPreferences
+        val factory = ViewModelFactory(repository, sharedPrefs)
         val viewModel = ViewModelProvider(this, factory)[MainViewModel::class.java]
 
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
+            val themeMode by viewModel.themeMode.collectAsState()
+            val isDark = when (themeMode) {
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+            
+            MyApplicationTheme(darkTheme = isDark) {
                 MainAppLayout(viewModel)
             }
         }
@@ -83,39 +91,57 @@ fun MainAppLayout(viewModel: MainViewModel) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = "Monitor BCV",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = NaturalCharcoal
-                        )
+                        Column {
+                            Text(
+                                text = "MONITOR BCV",
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 18.sp,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = "Tasa Oficial de Cambio",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
 
-                        // Manual Refresh Button
+                        // Manual Refresh Button styled as a modern crypto swap action icon
                         IconButton(
                             onClick = { viewModel.refreshRates() },
                             enabled = !isRefreshing,
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .testTag("btn_sync_rates")
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Sincronizar",
-                                tint = MossGreen,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            if (isRefreshing) {
+                                CircularProgressIndicator(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Sincronizar",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = NaturalLinen,
-                    titleContentColor = NaturalCharcoal
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
                 ),
                 modifier = Modifier.statusBarsPadding()
             )
         },
         bottomBar = {
-            // Highly customized navigation matching the exact Natural Tones HTML specification
             CustomBottomNavigationBar(
                 currentScreen = currentScreen,
                 onScreenSelected = { currentScreen = it }
@@ -127,11 +153,9 @@ fun MainAppLayout(viewModel: MainViewModel) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Smooth horizontal cross-fading animations between tabs
             when (currentScreen) {
                 AppScreen.Inicio -> HomeScreen(viewModel = viewModel)
                 AppScreen.Historial -> HistoryScreen(viewModel = viewModel)
-                AppScreen.Asistente -> AiScreen(viewModel = viewModel)
             }
         }
     }
@@ -143,21 +167,20 @@ fun CustomBottomNavigationBar(
     onScreenSelected: (AppScreen) -> Unit
 ) {
     Column {
-        // Divider line separating layout content from navbar
-        HorizontalDivider(color = StoneBeige, thickness = 1.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(ClayGrey)
+                .background(MaterialTheme.colorScheme.surface)
                 .windowInsetsPadding(WindowInsets.navigationBars)
-                .height(80.dp)
-                .padding(horizontal = 16.dp),
+                .height(72.dp)
+                .padding(horizontal = 24.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
             NavBarItem(
-                label = "Inicio",
+                label = "Mercado",
                 icon = Icons.Default.Home,
                 selected = currentScreen == AppScreen.Inicio,
                 onClick = { onScreenSelected(AppScreen.Inicio) },
@@ -165,19 +188,11 @@ fun CustomBottomNavigationBar(
             )
 
             NavBarItem(
-                label = "Tendencia",
+                label = "Historial",
                 icon = Icons.Default.List,
                 selected = currentScreen == AppScreen.Historial,
                 onClick = { onScreenSelected(AppScreen.Historial) },
                 testTag = "nav_btn_history"
-            )
-
-            NavBarItem(
-                label = "Asistente",
-                icon = Icons.Default.Face,
-                selected = currentScreen == AppScreen.Asistente,
-                onClick = { onScreenSelected(AppScreen.Asistente) },
-                testTag = "nav_btn_ai"
             )
         }
     }
@@ -194,25 +209,30 @@ fun RowScope.NavBarItem(
     Column(
         modifier = Modifier
             .weight(1f)
-            .clickable { onClick() }
+            .clickable(onClick = onClick)
             .testTag(testTag),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Active visual state gets a pill outline container in SageGreen
         Box(
             modifier = Modifier
-                .width(64.dp)
-                .height(32.dp)
+                .width(56.dp)
+                .height(30.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(if (selected) SageGreen else Color.Transparent),
+                .background(
+                    if (selected) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        Color.Transparent
+                    }
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = if (selected) MossDark else MutedOlive,
-                modifier = Modifier.size(22.dp)
+                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
             )
         }
 
@@ -222,7 +242,7 @@ fun RowScope.NavBarItem(
             text = label,
             fontSize = 11.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            color = if (selected) NaturalCharcoal else MutedOlive,
+            color = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
             letterSpacing = 0.2.sp
         )
     }
