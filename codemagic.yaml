@@ -1,29 +1,37 @@
 workflows:
   android-native-workflow:
-    name: Compilación Nativa Android APK
+    name: Compilación Nativa Android APK (Auto-Reparación de Gradle)
     max_build_duration: 60
     instance_type: mac_mini_m1
     environment:
       groups:
         - android_credentials
       vars:
-        JAVA_VERSION: "17" # Ajusta a "11" si tu proyecto es más antiguo
+        JAVA_VERSION: "17"
     triggering:
       events:
         - push
     scripts:
       - name: Configurar Entorno Java
         script: |
-          echo "Configurando la versión de Java..."
           jenv global $JAVA_VERSION
           java -version
-      - name: Otorgar permisos y Compilar APK
+      - name: Reparar Entorno y Compilar APK
         script: |
-          echo "=== Iniciando compilación de Gradle ==="
-          # Otorgar permisos de ejecución al script compilador de tu raíz
+          echo "=== REVISANDO ARCHIVOS EN LA RAÍZ ==="
+          ls -la
+
+          # Generar el archivo ejecutable gradlew si hace falta en el servidor
+          if [ ! -f "gradlew" ]; then
+            echo "⚠️ No se encontró el ejecutable 'gradlew'. Reparando entorno de Gradle..."
+            gradle wrapper
+          fi
+
+          echo "=== VERIFICANDO GENERACIÓN DE GRADLEW ==="
+          ls -la gradlew
+
+          echo "=== INICIANDO COMPILACIÓN DEL APK ==="
           chmod +x gradlew
-          
-          # Ejecutar el empaquetado limpio del APK en modo Debug
           ./gradlew clean assembleDebug
     artifacts:
-      - app/build/outputs/apk/debug/*.apk
+      - "**/build/outputs/apk/debug/*.apk"
