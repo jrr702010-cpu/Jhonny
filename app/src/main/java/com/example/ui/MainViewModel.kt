@@ -1,0 +1,256 @@
+package com.example.ui
+
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.example.data.BcvRateRecord
+import com.example.data.BcvRepository
+import com.example.network.BcvScraper
+import com.example.network.GeminiNetwork
+import com.example.network.ScrapResult
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.text.DecimalFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+class MainViewModel(private val repository: BcvRepository) : ViewModel() {
+
+    private val TAG = "MainViewModel"
+
+    // Raw rates history reactively from Room
+    val ratesHistory: StateFlow<List<BcvRateRecord>> = repository.allRates
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    // Current displayed rate record
+    private val _currentRate = MutableStateFlow<BcvRateRecord?>(null)
+    val currentRate: StateFlow<BcvRateRecord?> = _currentRate.asStateFlow()
+
+    // Sync status states
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    // Variation indicator based on previous items
+    private val _variationPercent = MutableStateFlow("0,00%")
+    val variationPercent: StateFlow<String> = _variationPercent.asStateFlow()
+
+    private val _isVariationPositive = MutableStateFlow(true)
+    val isVariationPositive: StateFlow<Boolean> = _isVariationPositive.asStateFlow()
+
+    // --- Converter States ---
+    private val _converterInput = MutableStateFlow("")
+    val converterInput: StateFlow<String> = _converterInput.asStateFlow()
+
+    private val _converterOutput = MutableStateFlow("0,00")
+    val converterOutput: StateFlow<String> = _converterOutput.asStateFlow()
+
+    private val _isConvertingUsdToBs = MutableStateFlow(true)
+    val isConvertingUsdToBs: StateFlow<Boolean> = _isConvertingUsdToBs.asStateFlow()
+
+    // --- AI Chat States ---
+    private val _chatMessages = MutableStateFlow<List<Pair<String, Boolean>>>(
+        listOf(
+            "¡Hola! Soy tu Asistente IA Financiero de Monitor BCV. Pregúntame sobre el tipo de cambio oficial, inflación, proyecciones económicas o cómo realizar conversiones." to false
+        )
+    )
+    val chatMessages: StateFlow<List<Pair<String, Boolean>>> = _chatMessages.asStateFlow()
+
+    private val _isChatLoading = MutableStateFlow(false)
+    val isChatLoading: StateFlow<Boolean> = _isChatLoading.asStateFlow()
+
+    init {
+        // Load latest available record initially
+        loadInitialData()
+    }
+
+    private fun loadInitialData() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            val latest = repository.getLatestRate()
+            if (latest != null) {
+                _currentRate.value = latest
+                calculateVariation(latest)
+                _isRefreshing.value = false
+            } else {
+                // If DB is fresh/empty, trigger rates fetch
+                refreshRates()
+            }
+        }
+    }
+
+    fun refreshRates() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            _errorMessage.value = null
+            Log.d(TAG, "Starting refresh rates process")
+
+            // Phase 1: Try scraping bcv.org.ve directly
+            val scrapRes = BcvScraper.fetchRatesDirectly()
+            if (scrapRes.success) {
+                saveScrapedRates(scrapRes, "BCV Oficial")
+            } else {
+                // Phase 2: If Direct fails, try Gemini AI Rate Recovery
+                Log.w(TAG, "Scraper failed: ${scrapRes.errorMsg}. Invoking Gemini AI fallback.")
+                val aiRes = GeminiNetwork.fetchRatesThroughAi()
+                if (aiRes.success) {
+                    saveScrapedRates(aiRes, "Asistente IA")
+                } else {
+                    // Phase 3: Both failed, fallback to local DB or sandbox default
+                    val lastSaved = repository.getLatestRate()
+                    if (lastSaved != null) {
+                        _currentRate.value = lastSaved
+                        calculateVariation(lastSaved)
+                        _errorMessage.value = "No se pudo actualizar de red. Mostrando datos sin conexión."
+                    } else {
+                        // DB empty and offline, load template defaults
+                        val todayString = SimpleDateFormat("EEEE, dd 'de' MMMM 'de' yyyy", Locale("es", "VE")).format(Date())
+                        val sandboxRecord = BcvRateRecord(
+                            dateText = todayString,
+                            usd = 36.42,
+                            eur = 39.55,
+                            cny = 5.01,
+                            tryLira = 1.13,
+                            rub = 0.39,
+                            source = "Simulado"
+                        )
+                        repository.insertRate(sandboxRecord)
+                        _currentRate.value = sandboxRecord
+                        _variationPercent.value = "+0,12%"
+                        _isVariationPositive.value = true
+                        _errorMessage.value = "Modo demostración. Conéctate a una red para sincronizar."
+                    }
+                }
+            }
+            _isRefreshing.value = false
+            updateConversion()
+        }
+    }
+
+    private suspend fun saveScrapedRates(res: ScrapResult, source: String) {
+        val nextRecord = BcvRateRecord(
+            dateText = res.dateText.ifEmpty {
+                SimpleDateFormat("EEEE, dd 'de' MMMM 'de' yyyy", Locale("es", "VE")).format(Date())
+            },
+            usd = res.usd,
+            eur = res.eur,
+            cny = res.cny,
+            tryLira = res.tryLira,
+            rub = res.rub,
+            source = source
+        )
+        repository.insertRate(nextRecord)
+        _currentRate.value = nextRecord
+        calculateVariation(nextRecord)
+    }
+
+    private suspend fun calculateVariation(current: BcvRateRecord) {
+        val previous = repository.getPreviousRate(current.id)
+        if (previous != null && previous.usd > 0.0) {
+            val diff = current.usd - previous.usd
+            val percent = (diff / previous.usd) * 100.0
+            val df = DecimalFormat("#,##0.00", java.text.DecimalFormatSymbols(Locale("es", "VE")))
+            val sign = if (percent >= 0) "+" else ""
+            _variationPercent.value = "$sign${df.format(percent)}%"
+            _isVariationPositive.value = percent >= 0
+        } else {
+            // Static fallback design variation
+            _variationPercent.value = "+0,12%"
+            _isVariationPositive.value = true
+        }
+    }
+
+    // --- Converter Actions ---
+    fun onConverterInputChange(input: String) {
+        // Enforce decimal separators format
+        val clean = input.replace(",", ".")
+        if (clean.isEmpty() || clean.toDoubleOrNull() != null || clean == ".") {
+            _converterInput.value = input
+            updateConversion()
+        }
+    }
+
+    fun toggleConversionDirection() {
+        _isConvertingUsdToBs.value = !_isConvertingUsdToBs.value
+        updateConversion()
+    }
+
+    private fun updateConversion() {
+        val inputStr = _converterInput.value.replace(",", ".").trim()
+        val usdRate = _currentRate.value?.usd ?: 36.42
+        
+        if (inputStr.isEmpty()) {
+            _converterOutput.value = "0,00"
+            return
+        }
+
+        val inputVal = inputStr.toDoubleOrNull() ?: 0.0
+        val df = DecimalFormat("#,##0.00", java.text.DecimalFormatSymbols(Locale("es", "VE")))
+        
+        if (_isConvertingUsdToBs.value) {
+            val converted = inputVal * usdRate
+            _converterOutput.value = df.format(converted)
+        } else {
+            val converted = if (usdRate > 0.0) inputVal / usdRate else 0.0
+            _converterOutput.value = df.format(converted)
+        }
+    }
+
+    // --- AI Chat Actions ---
+    fun sendChatMessage(message: String) {
+        val userMsg = message.trim()
+        if (userMsg.isEmpty()) return
+
+        // Save current list
+        val currentHistory = _chatMessages.value.toMutableList()
+        currentHistory.add(userMsg to true)
+        _chatMessages.value = currentHistory
+
+        _isChatLoading.value = true
+
+        viewModelScope.launch {
+            val response = GeminiNetwork.askFinancialAssistant(currentHistory, userMsg)
+            val updatedHistory = _chatMessages.value.toMutableList()
+            updatedHistory.add(response to false)
+            _chatMessages.value = updatedHistory
+            _isChatLoading.value = false
+        }
+    }
+
+    fun clearChat() {
+        _chatMessages.value = listOf(
+            "¡Hola! Soy tu Asistente IA Financiero de Monitor BCV. Pregúntame sobre el tipo de cambio oficial, inflación, proyecciones económicas o cómo realizar conversiones." to false
+        )
+    }
+
+    fun clearRates() {
+        viewModelScope.launch {
+            repository.clearRates()
+            _currentRate.value = null
+            _variationPercent.value = "0,00%"
+        }
+    }
+}
+
+// Custom ViewModel Factory compatible with standard Composable injection
+class ViewModelFactory(private val repository: BcvRepository) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return MainViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}

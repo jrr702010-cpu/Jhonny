@@ -1,0 +1,6 @@
+{
+  "name": "Monitor BCV",
+  "description": "Monitor oficial de la tasa de cambio del Banco Central de Venezuela, con soporte offline, calculadora integrada y asistente de mercado inteligente potenciado con IA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
