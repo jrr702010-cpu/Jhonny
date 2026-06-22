@@ -1,13 +1,13 @@
 workflows:
   android-native-workflow:
-    name: Compilación Nativa Android APK (Fuerza Gradle 9.3.1)
+    name: Compilación Nativa Android APK (Fuerza Clave Debug)
     max_build_duration: 60
     instance_type: mac_mini_m1
     environment:
       groups:
         - android_credentials
       vars:
-        JAVA_VERSION: "21" # Gradle 9 requiere Java 21+ para compilar de forma nativa
+        JAVA_VERSION: "21"
     triggering:
       events:
         - push
@@ -16,18 +16,19 @@ workflows:
         script: |
           jenv global $JAVA_VERSION
           java -version
-      - name: Reparar Entorno y Compilar APK
+      - name: Reparar Entorno, Crear Keystore y Compilar APK
         script: |
-          echo "=== REPARANDO Y FORZANDO VERSIÓN DE GRADLE ==="
-          
-          # Generar el wrapper pero forzando la versión exacta 9.3.1 que pide tu app
+          echo "=== CONFIGURANDO ENTORNO GRADLE ==="
           gradle wrapper --gradle-version 9.3.1
           
-          echo "=== VERIFICANDO ARCHIVOS GENERADOS ==="
-          ls -la gradlew
-          cat gradle/wrapper/gradle-wrapper.properties
+          echo "=== GENERANDO ARCHIVO DEBUG KEYSTORE AUTOMÁTICO ==="
+          # Genera un certificado debug estándar en la raíz del clon para satisfacer a 'debugConfig'
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          
+          echo "=== VERIFICANDO EXISTENCIA DE LA CLAVE ==="
+          ls -la debug.keystore
 
-          echo "=== INICIANDO COMPILACIÓN DEL APK ==="
+          echo "=== INICIANDO COMPILACIÓN FINAL DEL APK ==="
           chmod +x gradlew
           ./gradlew clean assembleDebug
     artifacts:
