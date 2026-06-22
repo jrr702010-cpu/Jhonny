@@ -1,34 +1,31 @@
 workflows:
   android-native-workflow:
-    name: Compilación Nativa Android APK (Auto-Reparación de Gradle)
+    name: Compilación Nativa Android APK (Fuerza Gradle 9.3.1)
     max_build_duration: 60
     instance_type: mac_mini_m1
     environment:
       groups:
         - android_credentials
       vars:
-        JAVA_VERSION: "17"
+        JAVA_VERSION: "21" # Gradle 9 requiere Java 21+ para compilar de forma nativa
     triggering:
       events:
         - push
     scripts:
-      - name: Configurar Entorno Java
+      - name: Configurar Entorno Java 21
         script: |
           jenv global $JAVA_VERSION
           java -version
       - name: Reparar Entorno y Compilar APK
         script: |
-          echo "=== REVISANDO ARCHIVOS EN LA RAÍZ ==="
-          ls -la
-
-          # Generar el archivo ejecutable gradlew si hace falta en el servidor
-          if [ ! -f "gradlew" ]; then
-            echo "⚠️ No se encontró el ejecutable 'gradlew'. Reparando entorno de Gradle..."
-            gradle wrapper
-          fi
-
-          echo "=== VERIFICANDO GENERACIÓN DE GRADLEW ==="
+          echo "=== REPARANDO Y FORZANDO VERSIÓN DE GRADLE ==="
+          
+          # Generar el wrapper pero forzando la versión exacta 9.3.1 que pide tu app
+          gradle wrapper --gradle-version 9.3.1
+          
+          echo "=== VERIFICANDO ARCHIVOS GENERADOS ==="
           ls -la gradlew
+          cat gradle/wrapper/gradle-wrapper.properties
 
           echo "=== INICIANDO COMPILACIÓN DEL APK ==="
           chmod +x gradlew
