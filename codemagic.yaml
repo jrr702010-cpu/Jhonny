@@ -1,34 +1,17 @@
-# Manual de automatización para Codemagic
-workflows:
-  android-workflow:
-    name: Compilación Automática APK
-    max_build_duration: 60
-    instance_type: mac_mini_m1
-    environment:
-      groups:
-        - android_credentials
-      vars:
-        PACKAGE_NAME: "io.codemagic.app"
-      node: latest
-    triggering:
-      events:
-        - push
-    scripts:
-      - name: Instalar herramientas y compilar APK
-        script: |
-          echo "Iniciando compilación automática..."
-          # Si tu proyecto es nativo usa gradlew, si es Flutter usa 'flutter build apk'
-          if [ -f "gradlew" ]; then
-            chmod +x gradlew
-            ./gradlew assembleDebug
-          elif [ -f "pubspec.yaml" ]; then
-            flutter packages get
-            flutter build apk --debug
-          else
-            echo "Detectando estructura de proyecto alternativa..."
-            cd android && chmod +x gradlew && ./gradlew assembleDebug || ./gradlew assembleDebug
-          fi
-    artifacts:
-      - app/build/outputs/apk/**/*.apk
-      - android/app/build/outputs/apk/**/*.apk
-      - build/app/outputs/flutter-apk/*.apk
+
+Iniciando compilación automática...
+Detectando estructura de proyecto alternativa...
+/var/folders/w2/rrf5p87d1bbfyphxc7jdnyvh0000gn/T/build_script_2_1_car6g6a7: line 13: cd: android: No such file or directory
+/var/folders/w2/rrf5p87d1bbfyphxc7jdnyvh0000gn/T/build_script_2_1_car6g6a7: line 13: ./gradlew: No such file or directory
+
+
+Build failed :|
+Step 2 script `Instalar herramientas y compilar APK` exited with status code 127
+Iniciando compilación automática...
+Detectando estructura de proyecto alternativa...
+/var/folders/w2/rrf5p87d1bbfyphxc7jdnyvh0000gn/T/build_script_2_1_car6g6a7: line 13: cd: android: No such file or directory
+/var/folders/w2/rrf5p87d1bbfyphxc7jdnyvh0000gn/T/build_script_2_1_car6g6a7: line 13: ./gradlew: No such file or directory
+
+
+Build failed :|
+Step 2 script `Instalar herramientas y compilar APK` exited with status code 127
