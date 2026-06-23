@@ -83,11 +83,35 @@ class MainViewModel(
     private val _notifyOnChanges = MutableStateFlow(false)
     val notifyOnChanges: StateFlow<Boolean> = _notifyOnChanges.asStateFlow()
 
+    private val _notifyOnLargeFluctuations = MutableStateFlow(false)
+    val notifyOnLargeFluctuations: StateFlow<Boolean> = _notifyOnLargeFluctuations.asStateFlow()
+
+    private val _notifyEuroChanges = MutableStateFlow(false)
+    val notifyEuroChanges: StateFlow<Boolean> = _notifyEuroChanges.asStateFlow()
+
+    private val _silentNotifications = MutableStateFlow(false)
+    val silentNotifications: StateFlow<Boolean> = _silentNotifications.asStateFlow()
+
+    private val _vibrationEnabled = MutableStateFlow(true)
+    val vibrationEnabled: StateFlow<Boolean> = _vibrationEnabled.asStateFlow()
+
+    private val _weeklySummaryEnabled = MutableStateFlow(false)
+    val weeklySummaryEnabled: StateFlow<Boolean> = _weeklySummaryEnabled.asStateFlow()
+
     private val _dailyReminderEnabled = MutableStateFlow(false)
     val dailyReminderEnabled: StateFlow<Boolean> = _dailyReminderEnabled.asStateFlow()
 
     private val _dailyReminderTime = MutableStateFlow("09:00")
     val dailyReminderTime: StateFlow<String> = _dailyReminderTime.asStateFlow()
+
+    private val _notificationsDeliveryMode = MutableStateFlow("RANDOM")
+    val notificationsDeliveryMode: StateFlow<String> = _notificationsDeliveryMode.asStateFlow()
+
+    private val _randomNotifFrequency = MutableStateFlow(3)
+    val randomNotifFrequency: StateFlow<Int> = _randomNotifFrequency.asStateFlow()
+
+    private val _customNotifTimes = MutableStateFlow(listOf("09:00", "13:00", "18:00"))
+    val customNotifTimes: StateFlow<List<String>> = _customNotifTimes.asStateFlow()
 
     private val _autoRefreshEnabled = MutableStateFlow(false)
     val autoRefreshEnabled: StateFlow<Boolean> = _autoRefreshEnabled.asStateFlow()
@@ -122,8 +146,17 @@ class MainViewModel(
         // Load notifications configuration
         _notificationsEnabled.value = sharedPreferences.getBoolean("pref_notif_enabled", false)
         _notifyOnChanges.value = sharedPreferences.getBoolean("pref_notif_changes", false)
+        _notifyOnLargeFluctuations.value = sharedPreferences.getBoolean("pref_notif_large_fluctuations", false)
+        _notifyEuroChanges.value = sharedPreferences.getBoolean("pref_notif_euro", false)
+        _silentNotifications.value = sharedPreferences.getBoolean("pref_notif_silent", false)
+        _vibrationEnabled.value = sharedPreferences.getBoolean("pref_notif_vibrate", true)
+        _weeklySummaryEnabled.value = sharedPreferences.getBoolean("pref_notif_weekly_summary", false)
         _dailyReminderEnabled.value = sharedPreferences.getBoolean("pref_daily_reminder_enabled", false)
         _dailyReminderTime.value = sharedPreferences.getString("pref_daily_reminder_time", "09:00") ?: "09:00"
+        _notificationsDeliveryMode.value = sharedPreferences.getString("pref_notif_delivery_mode", "RANDOM") ?: "RANDOM"
+        _randomNotifFrequency.value = sharedPreferences.getInt("pref_random_notif_frequency", 3)
+        val customTimesStr = sharedPreferences.getString("pref_custom_notif_times", "09:00,13:00,18:00") ?: "09:00,13:00,18:00"
+        _customNotifTimes.value = if (customTimesStr.isEmpty()) emptyList() else customTimesStr.split(",").filter { it.isNotEmpty() }.sorted()
         _autoRefreshEnabled.value = sharedPreferences.getBoolean("pref_auto_refresh_enabled", false)
 
         // Load background particle configuration
@@ -156,13 +189,7 @@ class MainViewModel(
     fun setNotificationsEnabled(enabled: Boolean) {
         _notificationsEnabled.value = enabled
         sharedPreferences.edit().putBoolean("pref_notif_enabled", enabled).apply()
-        
-        // Handle alarm update
-        if (!enabled) {
-            com.example.BcvReminderReceiver.cancelReminder(context)
-        } else if (_dailyReminderEnabled.value) {
-            com.example.BcvReminderReceiver.scheduleReminder(context, _dailyReminderTime.value)
-        }
+        updateNotificationAlarms()
     }
 
     fun setNotifyOnChanges(enabled: Boolean) {
@@ -170,23 +197,85 @@ class MainViewModel(
         sharedPreferences.edit().putBoolean("pref_notif_changes", enabled).apply()
     }
 
+    fun setNotifyOnLargeFluctuations(enabled: Boolean) {
+        _notifyOnLargeFluctuations.value = enabled
+        sharedPreferences.edit().putBoolean("pref_notif_large_fluctuations", enabled).apply()
+    }
+
+    fun setNotifyEuroChanges(enabled: Boolean) {
+        _notifyEuroChanges.value = enabled
+        sharedPreferences.edit().putBoolean("pref_notif_euro", enabled).apply()
+    }
+
+    fun setSilentNotifications(enabled: Boolean) {
+        _silentNotifications.value = enabled
+        sharedPreferences.edit().putBoolean("pref_notif_silent", enabled).apply()
+    }
+
+    fun setVibrationEnabled(enabled: Boolean) {
+        _vibrationEnabled.value = enabled
+        sharedPreferences.edit().putBoolean("pref_notif_vibrate", enabled).apply()
+    }
+
+    fun setWeeklySummaryEnabled(enabled: Boolean) {
+        _weeklySummaryEnabled.value = enabled
+        sharedPreferences.edit().putBoolean("pref_notif_weekly_summary", enabled).apply()
+    }
+
     fun setDailyReminderEnabled(enabled: Boolean) {
         _dailyReminderEnabled.value = enabled
         sharedPreferences.edit().putBoolean("pref_daily_reminder_enabled", enabled).apply()
-        
-        if (enabled && _notificationsEnabled.value) {
-            com.example.BcvReminderReceiver.scheduleReminder(context, _dailyReminderTime.value)
-        } else {
-            com.example.BcvReminderReceiver.cancelReminder(context)
-        }
+        updateNotificationAlarms()
     }
 
     fun setDailyReminderTime(timeStr: String) {
         _dailyReminderTime.value = timeStr
         sharedPreferences.edit().putString("pref_daily_reminder_time", timeStr).apply()
-        
+        updateNotificationAlarms()
+    }
+
+    fun setNotificationsDeliveryMode(mode: String) {
+        _notificationsDeliveryMode.value = mode
+        sharedPreferences.edit().putString("pref_notif_delivery_mode", mode).apply()
+        updateNotificationAlarms()
+    }
+
+    fun setRandomNotifFrequency(frequency: Int) {
+        _randomNotifFrequency.value = frequency
+        sharedPreferences.edit().putInt("pref_random_notif_frequency", frequency).apply()
+        updateNotificationAlarms()
+    }
+
+    fun addCustomNotifTime(timeStr: String) {
+        val current = _customNotifTimes.value.toMutableList()
+        if (!current.contains(timeStr)) {
+            current.add(timeStr)
+            val sortedList = current.sorted()
+            _customNotifTimes.value = sortedList
+            sharedPreferences.edit().putString("pref_custom_notif_times", sortedList.joinToString(",")).apply()
+            updateNotificationAlarms()
+        }
+    }
+
+    fun removeCustomNotifTime(timeStr: String) {
+        val current = _customNotifTimes.value.toMutableList()
+        if (current.remove(timeStr)) {
+            val sortedList = current.sorted()
+            _customNotifTimes.value = sortedList
+            sharedPreferences.edit().putString("pref_custom_notif_times", sortedList.joinToString(",")).apply()
+            updateNotificationAlarms()
+        }
+    }
+
+    private fun updateNotificationAlarms() {
         if (_dailyReminderEnabled.value && _notificationsEnabled.value) {
-            com.example.BcvReminderReceiver.scheduleReminder(context, timeStr)
+            if (_notificationsDeliveryMode.value == "RANDOM") {
+                com.example.BcvReminderReceiver.scheduleRandomReminders(context, _randomNotifFrequency.value)
+            } else {
+                com.example.BcvReminderReceiver.scheduleCustomReminders(context, _customNotifTimes.value)
+            }
+        } else {
+            com.example.BcvReminderReceiver.cancelReminder(context)
         }
     }
 

@@ -61,63 +61,168 @@ class BcvReminderReceiver : BroadcastReceiver() {
         private const val REQUEST_CODE = 3001
 
         fun scheduleReminder(context: Context, timeStr: String) {
-            // Parse timeStr (e.g. "09:00", "13:00", "18:00")
-            val parts = timeStr.split(":")
-            if (parts.size != 2) return
-            val hour = parts[0].toIntOrNull() ?: 9
-            val minute = parts[1].toIntOrNull() ?: 0
-
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            val intent = Intent(context, BcvReminderReceiver::class.java)
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                REQUEST_CODE,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
-            // Setup Calendar
-            val calendar = Calendar.getInstance().apply {
-                timeInMillis = System.currentTimeMillis()
-                set(Calendar.HOUR_OF_DAY, hour)
-                set(Calendar.MINUTE, minute)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-
-                // If scheduled time has already passed for today, set it for tomorrow
-                if (timeInMillis <= System.currentTimeMillis()) {
-                    add(Calendar.DAY_OF_YEAR, 1)
-                }
-            }
-
-            try {
-                // Exact alarm is not strictly necessary for simple price updates, setInexactRepeating is battery friendly:
-                alarmManager.setInexactRepeating(
-                    AlarmManager.RTC_WAKEUP,
-                    calendar.timeInMillis,
-                    AlarmManager.INTERVAL_DAY,
-                    pendingIntent
-                )
-                Log.d("BcvReminderReceiver", "Alarm scheduled daily at $hour:$minute. Next trigger: ${calendar.time}")
-            } catch (e: Exception) {
-                Log.e("BcvReminderReceiver", "Failed to schedule alarm", e)
-            }
+            // Legacy/fallback support
+            scheduleCustomReminders(context, listOf(timeStr))
         }
 
-        fun cancelReminder(context: Context) {
+        fun scheduleCustomReminders(context: Context, times: List<String>) {
+            cancelAllReminders(context)
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            times.forEachIndexed { index, timeStr ->
+                val parts = timeStr.split(":")
+                if (parts.size != 2) return@forEachIndexed
+                val hour = parts[0].toIntOrNull() ?: 9
+                val minute = parts[1].toIntOrNull() ?: 0
+
+                val intent = Intent(context, BcvReminderReceiver::class.java)
+                val requestCode = 3001 + index
+                val pendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    requestCode,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+
+                val calendar = Calendar.getInstance().apply {
+                    timeInMillis = System.currentTimeMillis()
+                    set(Calendar.HOUR_OF_DAY, hour)
+                    set(Calendar.MINUTE, minute)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+
+                    if (timeInMillis <= System.currentTimeMillis()) {
+                        add(Calendar.DAY_OF_YEAR, 1)
+                    }
+                }
+
+                try {
+                    alarmManager.setInexactRepeating(
+                        AlarmManager.RTC_WAKEUP,
+                        calendar.timeInMillis,
+                        AlarmManager.INTERVAL_DAY,
+                        pendingIntent
+                    )
+                    Log.d("BcvReminderReceiver", "Custom Alarm scheduled daily at $hour:$minute with code $requestCode. Next trigger: ${calendar.time}")
+                } catch (e: Exception) {
+                    Log.e("BcvReminderReceiver", "Failed to schedule custom alarm", e)
+                }
+            }
+            // Save the number of scheduled alarms so we know how many to cancel later
+            val sharedPrefs = context.getSharedPreferences("com.example.bcv_prefs", Context.MODE_PRIVATE)
+            sharedPrefs.edit().putInt("pref_active_alarms_count", times.size).apply()
+        }
+
+        fun scheduleRandomReminders(context: Context, frequency: Int) {
+            cancelAllReminders(context)
+            val sharedPrefs = context.getSharedPreferences("com.example.bcv_prefs", Context.MODE_PRIVATE)
+            
+            // Generate stable random times for today
+            val random = kotlin.random.Random(System.currentTimeMillis() + frequency)
+            val times = mutableListOf<String>()
+            for (i in 0 until frequency) {
+                // Generate hour between 8 AM and 9 PM (inclusive) so it doesn't notify in the middle of the night
+                val h = random.nextInt(8, 22)
+                val m = random.nextInt(0, 60)
+                times.add(String.format("%02d:%02d", h, m))
+            }
+            val sortedTimes = times.sorted()
+            
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            sortedTimes.forEachIndexed { index, timeStr ->
+                val parts = timeStr.split(":")
+                if (parts.size != 2) return@forEachIndexed
+                val hour = parts[0].toIntOrNull() ?: 9
+                val minute = parts[1].toIntOrNull() ?: 0
+
+                val intent = Intent(context, BcvReminderReceiver::class.java)
+                val requestCode = 3501 + index
+                val pendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    requestCode,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+
+                val calendar = Calendar.getInstance().apply {
+                    timeInMillis = System.currentTimeMillis()
+                    set(Calendar.HOUR_OF_DAY, hour)
+                    set(Calendar.MINUTE, minute)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+
+                    if (timeInMillis <= System.currentTimeMillis()) {
+                        add(Calendar.DAY_OF_YEAR, 1)
+                    }
+                }
+
+                try {
+                    alarmManager.setInexactRepeating(
+                        AlarmManager.RTC_WAKEUP,
+                        calendar.timeInMillis,
+                        AlarmManager.INTERVAL_DAY,
+                        pendingIntent
+                    )
+                    Log.d("BcvReminderReceiver", "Random Alarm scheduled daily at $hour:$minute with code $requestCode. Next trigger: ${calendar.time}")
+                } catch (e: Exception) {
+                    Log.e("BcvReminderReceiver", "Failed to schedule random alarm", e)
+                }
+            }
+            
+            sharedPrefs.edit()
+                .putInt("pref_active_random_alarms_count", sortedTimes.size)
+                .putString("pref_generated_random_times_list", sortedTimes.joinToString(","))
+                .apply()
+        }
+
+        fun cancelAllReminders(context: Context) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             val intent = Intent(context, BcvReminderReceiver::class.java)
-            val pendingIntent = PendingIntent.getBroadcast(
+            
+            // Cancel any old single alarm
+            val legacyPendingIntent = PendingIntent.getBroadcast(
                 context,
                 REQUEST_CODE,
                 intent,
                 PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
             )
-            if (pendingIntent != null) {
-                alarmManager.cancel(pendingIntent)
-                pendingIntent.cancel()
-                Log.d("BcvReminderReceiver", "Scheduled alarm cancelled")
+            if (legacyPendingIntent != null) {
+                alarmManager.cancel(legacyPendingIntent)
+                legacyPendingIntent.cancel()
             }
+
+            val sharedPrefs = context.getSharedPreferences("com.example.bcv_prefs", Context.MODE_PRIVATE)
+            val customCount = sharedPrefs.getInt("pref_active_alarms_count", 100)
+            for (i in 0 until maxOf(customCount, 100)) {
+                val pendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    3001 + i,
+                    intent,
+                    PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+                )
+                if (pendingIntent != null) {
+                    alarmManager.cancel(pendingIntent)
+                    pendingIntent.cancel()
+                }
+            }
+
+            val randomCount = sharedPrefs.getInt("pref_active_random_alarms_count", 100)
+            for (i in 0 until maxOf(randomCount, 100)) {
+                val pendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    3501 + i,
+                    intent,
+                    PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+                )
+                if (pendingIntent != null) {
+                    alarmManager.cancel(pendingIntent)
+                    pendingIntent.cancel()
+                }
+            }
+            Log.d("BcvReminderReceiver", "All scheduled alarms cancelled")
+        }
+
+        fun cancelReminder(context: Context) {
+            cancelAllReminders(context)
         }
     }
 }
