@@ -101,6 +101,15 @@ class MainViewModel(
     private val _particlesPalette = MutableStateFlow(ParticlePalette.DEFAULT)
     val particlesPalette: StateFlow<ParticlePalette> = _particlesPalette.asStateFlow()
 
+    private val _particlesCount = MutableStateFlow(30)
+    val particlesCount: StateFlow<Int> = _particlesCount.asStateFlow()
+
+    private val _particlesSizeScale = MutableStateFlow(1.0f)
+    val particlesSizeScale: StateFlow<Float> = _particlesSizeScale.asStateFlow()
+
+    private val _particlesSpeedScale = MutableStateFlow(1.0f)
+    val particlesSpeedScale: StateFlow<Float> = _particlesSpeedScale.asStateFlow()
+
     init {
         // Load theme preference
         val savedTheme = sharedPreferences.getString("theme_mode", ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name
@@ -126,6 +135,9 @@ class MainViewModel(
         } catch (e: Exception) {
             ParticlePalette.DEFAULT
         }
+        _particlesCount.value = sharedPreferences.getInt("pref_particles_count", 30)
+        _particlesSizeScale.value = sharedPreferences.getFloat("pref_particles_size_scale", 1.0f)
+        _particlesSpeedScale.value = sharedPreferences.getFloat("pref_particles_speed_scale", 1.0f)
 
         // Initialize background worker if enabled
         if (_autoRefreshEnabled.value) {
@@ -202,6 +214,21 @@ class MainViewModel(
     fun setParticlesPalette(palette: ParticlePalette) {
         _particlesPalette.value = palette
         sharedPreferences.edit().putString("pref_particles_palette", palette.name).apply()
+    }
+
+    fun setParticlesCount(count: Int) {
+        _particlesCount.value = count
+        sharedPreferences.edit().putInt("pref_particles_count", count).apply()
+    }
+
+    fun setParticlesSizeScale(scale: Float) {
+        _particlesSizeScale.value = scale
+        sharedPreferences.edit().putFloat("pref_particles_size_scale", scale).apply()
+    }
+
+    fun setParticlesSpeedScale(scale: Float) {
+        _particlesSpeedScale.value = scale
+        sharedPreferences.edit().putFloat("pref_particles_speed_scale", scale).apply()
     }
 
     private fun loadInitialData() {

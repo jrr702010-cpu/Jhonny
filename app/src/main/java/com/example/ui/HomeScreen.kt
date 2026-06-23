@@ -18,6 +18,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -48,6 +50,9 @@ fun HomeScreen(
     val particlesEnabled by viewModel.particlesEnabled.collectAsState()
     val particlesInteractive by viewModel.particlesInteractive.collectAsState()
     val particlesPalette by viewModel.particlesPalette.collectAsState()
+    val particlesCount by viewModel.particlesCount.collectAsState()
+    val particlesSizeScale by viewModel.particlesSizeScale.collectAsState()
+    val particlesSpeedScale by viewModel.particlesSpeedScale.collectAsState()
 
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
     val isDarkTheme = when (themeMode) {
@@ -60,17 +65,45 @@ fun HomeScreen(
     val dateTextValue = currentRate?.dateText ?: "Cargando..."
     val sourceValue = currentRate?.source ?: "BCV Oficial"
 
+    var touchX by remember { mutableStateOf<Float?>(null) }
+    var touchY by remember { mutableStateOf<Float?>(null) }
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .pointerInput(particlesInteractive) {
+                if (particlesInteractive) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val anyPressed = event.changes.any { it.pressed }
+                            if (anyPressed) {
+                                val activePointer = event.changes.firstOrNull { it.pressed }
+                                if (activePointer != null) {
+                                    touchX = activePointer.position.x
+                                    touchY = activePointer.position.y
+                                }
+                            } else {
+                                touchX = null
+                                touchY = null
+                            }
+                        }
+                    }
+                }
+            }
     ) {
         // --- High Fidelity Interactive Node Connection background particle simulation ---
         InteractiveParticleBackground(
             enabled = particlesEnabled,
             interactive = particlesInteractive,
             palette = particlesPalette,
-            isDarkTheme = isDarkTheme
+            isDarkTheme = isDarkTheme,
+            count = particlesCount,
+            sizeScale = particlesSizeScale,
+            speedScale = particlesSpeedScale,
+            touchX = touchX,
+            touchY = touchY
         )
 
         Column(

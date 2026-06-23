@@ -50,6 +50,9 @@ fun SettingsScreen(
     val particlesEnabled by viewModel.particlesEnabled.collectAsState()
     val particlesInteractive by viewModel.particlesInteractive.collectAsState()
     val particlesPalette by viewModel.particlesPalette.collectAsState()
+    val particlesCount by viewModel.particlesCount.collectAsState()
+    val particlesSizeScale by viewModel.particlesSizeScale.collectAsState()
+    val particlesSpeedScale by viewModel.particlesSpeedScale.collectAsState()
 
     // Dynamic Permission launcher for Android 13+
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -418,6 +421,111 @@ fun SettingsScreen(
                                 checked = particlesInteractive,
                                 onCheckedChange = { viewModel.setParticlesInteractive(it) },
                                 modifier = Modifier.scale(0.85f).testTag("switch_particles_interactive")
+                            )
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+
+                        // Cantidad de partículas Slider
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Cantidad de Nodos",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "$particlesCount",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Text(
+                                text = "Define la densidad visual de la red de nodos en el fondo",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Slider(
+                                value = particlesCount.toFloat(),
+                                onValueChange = { viewModel.setParticlesCount(it.toInt()) },
+                                valueRange = 10f..100f,
+                                modifier = Modifier.testTag("slider_particles_count")
+                            )
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+
+                        // Tamaño de partículas Slider
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Tamaño de Nodos",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = String.format("%.1fx", particlesSizeScale),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Text(
+                                text = "Ajusta la escala de los puntos de partículas",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Slider(
+                                value = particlesSizeScale,
+                                onValueChange = { viewModel.setParticlesSizeScale(it) },
+                                valueRange = 0.5f..3.0f,
+                                modifier = Modifier.testTag("slider_particles_size")
+                            )
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+
+                        // Velocidad Slider
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Velocidad de Movimiento",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = String.format("%.1fx", particlesSpeedScale),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Text(
+                                text = "Acelera o desacelera el flujo dinámico de la animación",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Slider(
+                                value = particlesSpeedScale,
+                                onValueChange = { viewModel.setParticlesSpeedScale(it) },
+                                valueRange = 0.2f..3.0f,
+                                modifier = Modifier.testTag("slider_particles_speed")
                             )
                         }
 
