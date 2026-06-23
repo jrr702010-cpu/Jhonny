@@ -92,6 +92,15 @@ class MainViewModel(
     private val _autoRefreshEnabled = MutableStateFlow(false)
     val autoRefreshEnabled: StateFlow<Boolean> = _autoRefreshEnabled.asStateFlow()
 
+    private val _particlesEnabled = MutableStateFlow(true)
+    val particlesEnabled: StateFlow<Boolean> = _particlesEnabled.asStateFlow()
+
+    private val _particlesInteractive = MutableStateFlow(false)
+    val particlesInteractive: StateFlow<Boolean> = _particlesInteractive.asStateFlow()
+
+    private val _particlesPalette = MutableStateFlow(ParticlePalette.DEFAULT)
+    val particlesPalette: StateFlow<ParticlePalette> = _particlesPalette.asStateFlow()
+
     init {
         // Load theme preference
         val savedTheme = sharedPreferences.getString("theme_mode", ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name
@@ -107,6 +116,16 @@ class MainViewModel(
         _dailyReminderEnabled.value = sharedPreferences.getBoolean("pref_daily_reminder_enabled", false)
         _dailyReminderTime.value = sharedPreferences.getString("pref_daily_reminder_time", "09:00") ?: "09:00"
         _autoRefreshEnabled.value = sharedPreferences.getBoolean("pref_auto_refresh_enabled", false)
+
+        // Load background particle configuration
+        _particlesEnabled.value = sharedPreferences.getBoolean("pref_particles_enabled", true)
+        _particlesInteractive.value = sharedPreferences.getBoolean("pref_particles_interactive", false)
+        val savedPalette = sharedPreferences.getString("pref_particles_palette", ParticlePalette.DEFAULT.name) ?: ParticlePalette.DEFAULT.name
+        _particlesPalette.value = try {
+            ParticlePalette.valueOf(savedPalette)
+        } catch (e: Exception) {
+            ParticlePalette.DEFAULT
+        }
 
         // Initialize background worker if enabled
         if (_autoRefreshEnabled.value) {
@@ -168,6 +187,21 @@ class MainViewModel(
         } else {
             com.example.BcvSyncScheduler.cancelBackgroundSync(context)
         }
+    }
+
+    fun setParticlesEnabled(enabled: Boolean) {
+        _particlesEnabled.value = enabled
+        sharedPreferences.edit().putBoolean("pref_particles_enabled", enabled).apply()
+    }
+
+    fun setParticlesInteractive(enabled: Boolean) {
+        _particlesInteractive.value = enabled
+        sharedPreferences.edit().putBoolean("pref_particles_interactive", enabled).apply()
+    }
+
+    fun setParticlesPalette(palette: ParticlePalette) {
+        _particlesPalette.value = palette
+        sharedPreferences.edit().putString("pref_particles_palette", palette.name).apply()
     }
 
     private fun loadInitialData() {
