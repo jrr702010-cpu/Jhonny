@@ -83,7 +83,7 @@ fun InteractiveParticleBackground(
                     if (widthPx > 0f && heightPx > 0f) {
                         val particlesListSize = particles.size
 
-                        // 1. Particle-to-Particle Elastic Collisions
+                        // 1. Particle-to-Particle Elastic Collisions (Repotenciado)
                         for (i in 0 until particlesListSize) {
                             val p1 = particles[i]
                             for (j in i + 1 until particlesListSize) {
@@ -92,16 +92,24 @@ fun InteractiveParticleBackground(
                                 val dy = p2.y - p1.y
                                 val dist = sqrt(dx * dx + dy * dy)
                                 val minDist = p1.r + p2.r
-                                if (dist < minDist && dist > 0.01f) {
-                                    // Overlap resolution (pushing them apart to prevent sticking)
+                                
+                                if (dist < minDist && dist > 0.001f) {
+                                    // Overlap resolution with mass approximation based on radius
                                     val overlap = minDist - dist
                                     val nx = dx / dist
                                     val ny = dy / dist
 
-                                    p1.x -= nx * overlap * 0.5f
-                                    p1.y -= ny * overlap * 0.5f
-                                    p2.x += nx * overlap * 0.5f
-                                    p2.y += ny * overlap * 0.5f
+                                    val mass1 = p1.r * p1.r
+                                    val mass2 = p2.r * p2.r
+                                    val totalMass = mass1 + mass2
+                                    
+                                    val ratio1 = mass2 / totalMass
+                                    val ratio2 = mass1 / totalMass
+
+                                    p1.x -= nx * overlap * ratio1
+                                    p1.y -= ny * overlap * ratio1
+                                    p2.x += nx * overlap * ratio2
+                                    p2.y += ny * overlap * ratio2
 
                                     // Relative velocity in normal direction
                                     val rVecX = p1.vx - p2.vx
@@ -110,10 +118,13 @@ fun InteractiveParticleBackground(
 
                                     // Only resolve if velocities are directed towards each other
                                     if (velAlongNormal > 0f) {
-                                        p1.vx -= velAlongNormal * nx
-                                        p1.vy -= velAlongNormal * ny
-                                        p2.vx += velAlongNormal * nx
-                                        p2.vy += velAlongNormal * ny
+                                        val restitution = 0.85f // Bounciness factor
+                                        val impulse = -(1f + restitution) * velAlongNormal
+                                        
+                                        p1.vx += impulse * nx * ratio1
+                                        p1.vy += impulse * ny * ratio1
+                                        p2.vx -= impulse * nx * ratio2
+                                        p2.vy -= impulse * ny * ratio2
                                     }
                                 }
                             }
@@ -129,9 +140,23 @@ fun InteractiveParticleBackground(
                                 val dy = ty - p.y
                                 val dist = sqrt(dx * dx + dy * dy)
                                 if (dist < activeLineMaxDistance && dist > 1f) {
-                                    val pullIntensity = (1f - dist / activeLineMaxDistance) * 45f * speedScale
-                                    p.vx += (dx / dist) * pullIntensity * dt
-                                    p.vy += (dy / dist) * pullIntensity * dt
+                                    // Repowered Interaction: Stronger pull with a slight orbital/swirl force
+                                    val forcePercent = 1f - (dist / activeLineMaxDistance)
+                                    val pullIntensity = forcePercent * 180f * speedScale
+                                    
+                                    // Orbital swirl component
+                                    val swirlX = -dy / dist
+                                    val swirlY = dx / dist
+                                    val swirlIntensity = forcePercent * 80f * speedScale
+
+                                    p.vx += ((dx / dist) * pullIntensity + swirlX * swirlIntensity) * dt
+                                    p.vy += ((dy / dist) * pullIntensity + swirlY * swirlIntensity) * dt
+                                    
+                                    // Dampen velocity slightly when very close to touch point to prevent orbiting out of control
+                                    if (dist < activeLineMaxDistance * 0.3f) {
+                                        p.vx *= 0.95f
+                                        p.vy *= 0.95f
+                                    }
                                 }
                             }
 
@@ -158,8 +183,8 @@ fun InteractiveParticleBackground(
 
                             // Safeguard speed bounds to guarantee stable floating animations
                             val speed = sqrt(p.vx * p.vx + p.vy * p.vy)
-                            val maxSpeed = 70f * speedScale
-                            val minSpeed = 15f * speedScale
+                            val maxSpeed = 120f * speedScale // Increased max speed for more dynamic movement
+                            val minSpeed = 10f * speedScale
                             if (speed > maxSpeed && speed > 0f) {
                                 p.vx = (p.vx / speed) * maxSpeed
                                 p.vy = (p.vy / speed) * maxSpeed
@@ -178,6 +203,9 @@ fun InteractiveParticleBackground(
             // Observe tick trigger state to invalidate layouts automatically
             @Suppress("UNUSED_VARIABLE")
             val tick = frameTrigger
+            
+            val timeMs = System.currentTimeMillis()
+            val pulse = (Math.sin(timeMs / 300.0) * 0.5 + 0.5).toFloat()
 
             val particlesListSize = particles.size
             
@@ -191,12 +219,14 @@ fun InteractiveParticleBackground(
                     val dist = sqrt(dx * dx + dy * dy)
                     
                     if (dist < maxLinesDistance) {
-                        val alpha = (1f - dist / maxLinesDistance) * 0.20f
+                        val distanceRatio = 1f - dist / maxLinesDistance
+                        // Enhanced glowing lines: alpha and thickness scale with proximity
+                        val alpha = distanceRatio * 0.35f
                         drawLine(
                             color = primaryColor.copy(alpha = alpha),
                             start = Offset(p1.x, p1.y),
                             end = Offset(p2.x, p2.y),
-                            strokeWidth = 1.1f
+                            strokeWidth = 1f + (distanceRatio * 2f)
                         )
                     }
                 }
@@ -209,12 +239,13 @@ fun InteractiveParticleBackground(
                     val dy = p1.y - ty
                     val dist = sqrt(dx * dx + dy * dy)
                     if (dist < activeLineMaxDistance) {
-                        val alpha = (1f - dist / activeLineMaxDistance) * 0.45f
+                        val distanceRatio = 1f - dist / activeLineMaxDistance
+                        val alpha = distanceRatio * 0.55f
                         drawLine(
                             color = secondaryColor.copy(alpha = alpha),
                             start = Offset(p1.x, p1.y),
                             end = Offset(tx, ty),
-                            strokeWidth = 1.6f
+                            strokeWidth = 1.5f + (distanceRatio * 3f)
                         )
                     }
                 }
@@ -223,16 +254,50 @@ fun InteractiveParticleBackground(
             // 2. Render all node cores
             for (i in 0 until particlesListSize) {
                 val p = particles[i]
-                // Layered dual-circle rendering creates beautiful depth & core brightness
+                
+                // Repowered: Layered triple-circle rendering creates beautiful depth, glow & core brightness
+                
+                // Outer subtle glow
                 drawCircle(
-                    color = primaryColor.copy(alpha = 0.35f),
+                    color = primaryColor.copy(alpha = 0.15f),
+                    radius = p.r * 1.8f,
+                    center = Offset(p.x, p.y)
+                )
+                
+                // Mid layer
+                drawCircle(
+                    color = primaryColor.copy(alpha = 0.45f),
                     radius = p.r,
                     center = Offset(p.x, p.y)
                 )
+                
+                // Inner bright core
                 drawCircle(
-                    color = secondaryColor.copy(alpha = 0.85f),
-                    radius = p.r * 0.55f,
+                    color = secondaryColor.copy(alpha = 0.95f),
+                    radius = p.r * 0.5f,
                     center = Offset(p.x, p.y)
+                )
+            }
+            
+            // 3. Render Touch Attractor Node if active
+            val tx = touchX
+            val ty = touchY
+            if (interactive && tx != null && ty != null) {
+                // Pulsating touch magnet effect
+                drawCircle(
+                    color = secondaryColor.copy(alpha = 0.15f + (pulse * 0.15f)),
+                    radius = 35f + (pulse * 15f),
+                    center = Offset(tx, ty)
+                )
+                drawCircle(
+                    color = primaryColor.copy(alpha = 0.4f),
+                    radius = 20f,
+                    center = Offset(tx, ty)
+                )
+                drawCircle(
+                    color = secondaryColor.copy(alpha = 0.9f),
+                    radius = 8f,
+                    center = Offset(tx, ty)
                 )
             }
         }
